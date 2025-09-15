@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "@ant-design/icons": "^6.0.2",
+    "antd": "^5.27.3",
+    "axios": "^1.12.2",
+    "leaflet": "^1.9.4",
+    "next-auth": "^4.24.11",
+    "react-leaflet": "^5.0.0"
+  }
+}
