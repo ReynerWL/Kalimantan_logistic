@@ -1,54 +1,45 @@
-import { Column, CreateDateColumn, DeleteDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
-import { User } from './user.entity';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
 import { Truck } from './truck.entity';
 import { DeliveryPoint } from './delivery-point.entity';
+import { User } from './user.entity';
 
-@Entity('trips')
+
+@Entity()
 export class Trip {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => User, (user) => user.trips, { eager: true })
-  @JoinColumn({ name: 'driver_id' })
-  driver: User;
-
-  @ManyToOne(() => Truck, (truck) => truck.trips, { eager: true })
-  @JoinColumn({ name: 'truck_id' })
-  truck: Truck;
-
-  @ManyToOne(() => DeliveryPoint, (dp) => dp.trips, { eager: true })
-  @JoinColumn({ name: 'destination_id' })
-  destination: DeliveryPoint;
-
-  @Column({ type: 'double precision', default: 0 })
-  distanceKm: number; // round trip km
-
-  @Column({ type: 'double precision', default: 0 })
-  fuelUsedLiters: number;
-
-  @Column({ type: 'double precision', default: 0 })
-  fuelCost: number;
-
-  @Column({ type: 'double precision', default: 0 })
-  mealCost: number;
-
-  @Column({ type: 'double precision', default: 0 })
-  miscCost: number;
-
-  @Column({ type: 'double precision', default: 0 })
-  totalCost: number;
-
-  @Column({ type: 'timestamptz', name: 'trip_date' })
+  @Column()
   tripDate: Date;
 
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
+  @Column('double precision')
+  distanceKm: number;
 
-  @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt: Date;
+  @Column('double precision')
+  durationHours: number;
 
-  @DeleteDateColumn({ name: 'deleted_at', nullable: true })
-  deletedAt?: Date | null;
+  @Column('double precision')
+  fuelUsedLiters: number;
+
+  @Column('double precision') // IDR
+  fuelCost: number;
+
+  @Column('double precision')
+  mealCost: number;
+
+  @Column({ type: 'double precision', nullable: true })
+  miscCost: number;
+
+  @Column('double precision')
+  totalCost: number;
+
+  // Relations
+  @ManyToOne(() => User, (driver:User) => driver.trips)
+  driver: User;
+
+  @ManyToOne(() => Truck, (truck:Truck) => truck.trips)
+  truck: Truck;
+
+  @ManyToOne(() => DeliveryPoint, (dp:DeliveryPoint) => dp.trips)
+  destination: DeliveryPoint;
 }
-
-

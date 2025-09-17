@@ -23,8 +23,8 @@ class CreateDeliveryPointDto {
   longitude: number;
 }
 
-@UseGuards(AuthGuard('jwt'), RolesGuard)
-@Roles('admin')
+// @UseGuards(AuthGuard('jwt'), RolesGuard)
+// @Roles('admin')
 @Controller('delivery-points')
 export class DeliveryPointsController {
   constructor(private readonly service: DeliveryPointsService) {}

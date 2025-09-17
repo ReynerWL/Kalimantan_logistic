@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { IsEmail, IsIn, IsOptional, IsString, MinLength } from 'class-validator';
 import { AuthGuard } from '@nestjs/passport';
@@ -34,8 +34,8 @@ class UpdateUserDto {
   role?: 'admin' | 'driver';
 }
 
-@UseGuards(AuthGuard('jwt'), RolesGuard)
-@Roles('admin')
+// @UseGuards(AuthGuard('jwt'), RolesGuard)
+// @Roles('admin')
 @Controller('users')
 export class UsersController {
   constructor(private readonly service: UsersService) {}
@@ -43,6 +43,11 @@ export class UsersController {
   @Get()
   findAll() {
     return this.service.findAll();
+  }
+
+  @Get('driver')
+  findAllDriver() {
+    return this.service.findAllDriver();
   }
 
   @Get(':id')

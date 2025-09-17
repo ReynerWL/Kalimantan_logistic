@@ -23,8 +23,8 @@ class CreateTruckDto {
   color: string;
 }
 
-@UseGuards(AuthGuard('jwt'), RolesGuard)
-@Roles('admin')
+// @UseGuards(AuthGuard('jwt'), RolesGuard)
+// @Roles('admin')
 @Controller('trucks')
 export class TrucksController {
   constructor(private readonly service: TrucksService) {}

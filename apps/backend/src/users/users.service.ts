@@ -11,6 +11,10 @@ export class UsersService {
     return this.repo.find();
   }
 
+  findAllDriver() {
+    return this.repo.find({ where: { role: 'driver' } });
+  }
+
   async findOne(id: string) {
     const item = await this.repo.findOne({ where: { id } });
     if (!item) throw new NotFoundException('User not found');

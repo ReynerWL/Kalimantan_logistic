@@ -10,13 +10,13 @@ export default function LoginPage() {
 		const ok = await login({ email: values.email, password: values.password });
 		if (ok) {
 			message.success('Logged in');
-			router.push('/');
+			router.push('/admin');
 		} else {
 			message.error('Login failed');
 		}
 	};
 	return (
-		<div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+		<div className="min-h-screen flex items-center justify-center bg-gray-60 p-4">
 			<Card className="w-full max-w-md">
 				<Typography.Title level={3}>Masuk</Typography.Title>
 				<Form layout="vertical" onFinish={onFinish}>

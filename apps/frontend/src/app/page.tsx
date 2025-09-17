@@ -9,12 +9,9 @@ export default function Home() {
 	useEffect(() => {
 		if (loading) return;
 		if (!user) {
-			router.replace('/login');
+			router.replace('/driver');
 			return;
 		}
-		const role = user.role;
-		if (role === 'admin') router.replace('/admin');
-		else router.replace('/driver');
 	}, [user, loading, router]);
 	return null;
 }
