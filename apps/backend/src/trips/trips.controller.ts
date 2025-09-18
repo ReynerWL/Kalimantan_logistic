@@ -72,8 +72,13 @@ export class TripsController {
   constructor(private readonly service: TripsService) {}
 
   @Get()
-  findAll() {
-    return this.service.findAll();
+  findAll(
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '10',
+  ) {
+    const pageNum = parseInt(page, 10) || 1;
+    const limitNum = parseInt(limit, 10) || 10;
+    return this.service.findAll(pageNum, limitNum);
   }
 
   @Get(':id')
@@ -136,11 +141,11 @@ export class TripsController {
     return this.service.remove(id);
   }
 
- @Get('preview/cost')
+  @Get('preview/cost')
   async previewCost(
     @Query('destinationId') destinationId: string,
     @Query('truckId') truckId: string,
-    @Query('startAt') startAt: string
+    @Query('startAt') startAt: string,
   ) {
     const hub = { lat: -2.2166, lng: 113.9166 };
     const fuelPricePerLiter = 10000;
@@ -167,7 +172,7 @@ export class TripsController {
 
   @Get('export/csv')
   async exportCsv(@Res() res: Response) {
-    const items = await this.service.findAll();
+    const items = await this.service.findAllRaw();
     const data = items.map((t) => ({
       id: t.id,
       driver: t.driver?.name,

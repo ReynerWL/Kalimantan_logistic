@@ -1,6 +1,7 @@
 'use client';
 import { useEffect } from 'react';
 import { AuthProvider } from '@/context/AuthContext';
+import { StyleProvider } from '@ant-design/cssinjs';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
 	useEffect(() => {
@@ -8,7 +9,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 			navigator.serviceWorker.register('/sw.js');
 		}
 	}, []);
-	return <AuthProvider>{children}</AuthProvider>;
+	return (
+    <AuthProvider>
+      <StyleProvider hashPriority="high">{children}</StyleProvider>
+    </AuthProvider>
+  );
 }
 
 

@@ -32,6 +32,39 @@ export class DeliveryPointsService {
     await this.repo.softDelete({ id });
     return { success: true };
   }
+
+  async importFromJson(data: any[]) {
+    const successful = [];
+    const failed = [];
+    const errors = [];
+
+    for (const item of data) {
+      try {
+        // Validate required fields
+        if (!item.nama || item.latitude === undefined || item.longitude === undefined) {
+          throw new Error(`Missing required fields: nama, latitude, longitude`);
+        }
+
+        const point = this.repo.create({
+          name: item.nama,
+          address: item.alamat || null,
+          latitude: parseFloat(item.latitude),
+          longitude: parseFloat(item.longitude),
+        });
+
+        const saved = await this.repo.save(point);
+        successful.push(saved);
+      } catch (err) {
+        failed.push(item);
+        errors.push({
+          item: item.nama || 'Unknown item',
+          error: err.message,
+        });
+      }
+    }
+
+    return { successful, failed, errors };
+  }
 }
 
 

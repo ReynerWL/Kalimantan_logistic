@@ -1,6 +1,8 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+// src/app/globals.css
+@import '~antd/dist/antd.css';
 
 :root {
   --background: #ffffff;
@@ -25,3 +27,44 @@ body {
     text-wrap: balance;
   }
 }
+
+.responsive-table {
+    font-size: 14px;
+    border-collapse: collapse;
+  }
+
+.responsive-table th,
+.responsive-table td {
+    padding: 8px 12px;
+    white-space: normal;
+    word-wrap: break-word;
+    max-width: 150px;
+  }
+
+@media (max-width: 768px) {
+.responsive-table {
+      font-size: 12px;
+    }
+
+.responsive-table th,
+.responsive-table td {
+      padding: 6px 8px;
+      max-width: 100px;
+    }
+  }
+
+  .responsive-table-container::-webkit-scrollbar {
+            height: 6px;
+            width: 6px;
+          }
+          .responsive-table-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+          }
+          .responsive-table-container::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 3px;
+          }
+          .responsive-table-container::-webkit-scrollbar-thumb:hover {
+            background: #999;
+          }

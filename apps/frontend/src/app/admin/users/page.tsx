@@ -2,7 +2,22 @@
 
 import { useEffect, useState } from 'react';
 import { useApi } from '@/lib/api';
-import { Table, Button, Modal, Form, Input, Select, message, Upload, Spin } from 'antd';
+import {
+  Table,
+  Button,
+  Modal,
+  Form,
+  Input,
+  Select,
+  Card,
+  Typography,
+  Space,
+  Upload,
+  message,
+} from 'antd';
+import { DownloadOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons';
+
+const { Title } = Typography;
 
 export default function UsersAdmin() {
   const api = useApi();
@@ -34,10 +49,10 @@ export default function UsersAdmin() {
     try {
       setSubmitting(true);
       const values = await form.validateFields();
-      
+
       await api.post('/users', values);
       message.success('User berhasil dibuat');
-      
+
       form.resetFields();
       setOpen(false);
       load(); // Refresh list
@@ -68,7 +83,7 @@ export default function UsersAdmin() {
   };
 
   // Import CSV
-  const handleImport = async ({ file }: { file: any }) => {
+  const handleImport = async ({ file }: { file: File }) => {
     const formData = new FormData();
     formData.append('file', file);
 
@@ -76,7 +91,7 @@ export default function UsersAdmin() {
       await api.post('/users/import/csv', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      message.success('Import berhasil');
+      message.success('Impor berhasil');
       load();
     } catch (err: any) {
       message.error(
@@ -90,50 +105,71 @@ export default function UsersAdmin() {
       title: 'Nama',
       dataIndex: 'name',
       key: 'name',
+      render: (name: string) =><div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name || '-'}</div>,
     },
     {
       title: 'Email',
       dataIndex: 'email',
       key: 'email',
+      render: (email: string) =><div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email || '-'}</div>,
     },
     {
       title: 'Role',
       dataIndex: 'role',
       key: 'role',
       render: (role: string) => (
-        <span className="capitalize font-medium text-gray-700">
+        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span className="capitalize font-medium" style={{
+          color: role === 'admin' ? '#1890ff' : '#52c41a',
+          backgroundColor: role === 'admin' ? '#e6f7ff' : '#f6ffed',
+          padding: '4px 8px',
+          borderRadius: '4px',
+          fontSize: '13px'
+        }}>
           {role}
         </span>
+        </div>
       ),
     },
   ];
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow-sm">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <h1 className="text-xl font-semibold text-gray-800">Manajemen Pengguna</h1>
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-          <Button onClick={onExport} loading={loading}>
-            Export CSV
-          </Button>
-          <Upload
-            showUploadList={false}
-            customRequest={({ file }) => {
-              handleImport({ file });
-              return { onSuccess: () => {}, onError: () => {} };
-            }}
-          >
-            <Button>Import CSV</Button>
-          </Upload>
-          <Button type="primary" onClick={() => setOpen(true)}>
-            Tambah User
-          </Button>
+    <div style={{ padding: '24px', background: '#f5f5f5', minHeight: '100vh' }}>
+      {/* Page Header */}
+      <Card style={{ marginBottom: '24px', borderRadius: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Title level={3} style={{ margin: 0, color: '#1890ff' }}>
+            👥 Manajemen Pengguna
+          </Title>
+          <Space wrap>
+            <Button icon={<DownloadOutlined />} onClick={onExport} loading={loading}>
+              Export CSV
+            </Button>
+            <Upload
+              showUploadList={false}
+              customRequest={({ file }) => {
+                handleImport({ file: file as File });
+                return { onSuccess: () => {}, onError: () => {} };
+              }}
+            >
+              <Button icon={<UploadOutlined />}>Import CSV</Button>
+            </Upload>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => {
+                setOpen(true);
+                form.resetFields();
+              }}
+            >
+              Tambah User
+            </Button>
+          </Space>
         </div>
-      </div>
+      </Card>
 
-      {/* Table */}
-      <div className="overflow-x-auto">
+      {/* Data Table */}
+      <Card style={{ borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
         <Table
           rowKey="id"
           dataSource={data}
@@ -145,8 +181,10 @@ export default function UsersAdmin() {
             position: ['bottomCenter'],
           }}
           scroll={{ x: true }}
+          style={{ minWidth: "600px" }} 
+          className="responsive-table"
         />
-      </div>
+      </Card>
 
       {/* Add User Modal */}
       <Modal
@@ -160,6 +198,7 @@ export default function UsersAdmin() {
         title="Tambah Pengguna Baru"
         okText="Simpan"
         cancelText="Batal"
+        width={600}
       >
         <Form layout="vertical" form={form}>
           <Form.Item

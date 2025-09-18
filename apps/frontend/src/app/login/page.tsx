@@ -10,7 +10,7 @@ export default function LoginPage() {
 		const ok = await login({ email: values.email, password: values.password });
 		if (ok) {
 			message.success('Logged in');
-			router.push('/admin');
+			router.push('/admin/overview');
 		} else {
 			message.error('Login failed');
 		}

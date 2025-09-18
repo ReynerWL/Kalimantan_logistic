@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Put, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { DeliveryPointsService } from './delivery-points.service';
 import { AuthGuard } from '@nestjs/passport';
 import { Roles } from '../auth/roles.decorator';
@@ -44,7 +44,26 @@ export class DeliveryPointsController {
     return this.service.create(dto);
   }
 
-  @Patch(':id')
+  @Post('import')
+  @HttpCode(HttpStatus.CREATED)
+  async importFromJson(@Body() data: any[]) {
+    if (!Array.isArray(data)) {
+      return {
+        statusCode: HttpStatus.BAD_REQUEST,
+        message: 'Payload must be an array of delivery points',
+      };
+    }
+
+    const results = await this.service.importFromJson(data);
+    return {
+      message: `Successfully imported ${results.successful} delivery point(s)`,
+      successful: results.successful,
+      failed: results.failed,
+      errors: results.errors,
+    };
+  }
+
+  @Put(':id')
   update(@Param('id') id: string, @Body() dto: Partial<CreateDeliveryPointDto>) {
     return this.service.update(id, dto);
   }
