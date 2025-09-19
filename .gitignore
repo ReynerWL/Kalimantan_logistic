@@ -1,5 +1,12 @@
-node_modules/
-.env*
-dist/
-.next/
-coverage/
+node_modules
+.git
+.next
+out
+dist
+*.log
+npm-debug.log*
+yarn-error.log*
+yarn-debug.log*
+Dockerfile*
+.dockerignore
+README.md
