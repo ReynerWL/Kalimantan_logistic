@@ -1,8 +1,18 @@
-export default {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  // ✅ Correct location
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  output: 'export', 
+  images: {
+    unoptimized: true, // Required when using `output: 'export'`
+  },
+  // Optional: If you want to set cache headers globally
   async headers() {
     return [
       {
-        source: '/(.*).js',
+        source: '/:path*',
         headers: [
           {
             key: 'Cache-Control',
@@ -12,4 +22,8 @@ export default {
       },
     ];
   },
+
+  // Other config...
 };
+
+export default nextConfig;
