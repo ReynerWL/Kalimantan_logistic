@@ -27,3 +27,18 @@ desktop.ini
 .env.local
 .env.development
 .env.staging
+# .dockerignore
+node_modules
+.next
+out
+dist
+build
+npm-debug.log
+.git
+.env.local
+.DS_Store
+Thumbs.db
+*.log
+logs/
+coverage/
+.nyc_output/

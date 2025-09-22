@@ -1,12 +1,19 @@
+# .dockerignore
 node_modules
-.git
 .next
 out
 dist
+build
+npm-debug.log
+.git
+.env.local
+.DS_Store
+Thumbs.db
 *.log
-npm-debug.log*
-yarn-error.log*
-yarn-debug.log*
-Dockerfile*
-.dockerignore
-README.md
+logs/
+coverage/
+.nyc_output/
+cache/
+.yarn/
+.pnpm/
+.turbo/
