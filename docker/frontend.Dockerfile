@@ -1,4 +1,4 @@
-# docker/frontend.Dockerfile
+# --- Builder ---
 FROM node:18-slim AS builder
 
 WORKDIR /app
@@ -6,10 +6,10 @@ WORKDIR /app
 # Copy package files
 COPY apps/frontend/package*.json ./
 
-# Install dependencies
+# Install all dependencies
 RUN npm ci
 
-# Copy source code
+# Copy source
 COPY apps/frontend/. .
 
 # Build app
@@ -21,17 +21,14 @@ FROM node:18-slim AS runner
 
 WORKDIR /app
 
-# Copy built output
+# Copy only what's needed
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/package.json .
-COPY --from=builder /app/next.config.mjs .
+COPY --from=builder /app/package*.json ./
 
-# Install only production dependencies
-RUN npm ci --only=production
+# Install ONLY production dependencies
+RUN npm ci --omit=dev
 
-# Expose port 3000
 EXPOSE 3000
 
-# Start Next.js server
 CMD ["npx", "next", "start"]

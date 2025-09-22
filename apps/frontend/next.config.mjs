@@ -1,10 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // ✅ Correct location
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Optional: If you want to set cache headers globally
+  output: 'export',
+  images: { unoptimized: true },
   async headers() {
     return [
       {
@@ -19,7 +19,6 @@ const nextConfig = {
     ];
   },
 
-  // Other config...
 };
 
 export default nextConfig;
