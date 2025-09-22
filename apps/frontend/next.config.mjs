@@ -4,10 +4,6 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  output: 'export', 
-  images: {
-    unoptimized: true, // Required when using `output: 'export'`
-  },
   // Optional: If you want to set cache headers globally
   async headers() {
     return [

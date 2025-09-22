@@ -21,7 +21,7 @@ spec:
             - containerPort: 3000
           env:
             - name: NEXT_PUBLIC_API_URL
-              value: "http://backend-svc:3001"
+              value: "http://backend-svc:5000"
           resources:
             requests:
               memory: "256Mi"
@@ -50,10 +50,10 @@ spec:
           image: gitea.yourdomain.com:5000/logistics/backend:latest
           imagePullPolicy: Always
           ports:
-            - containerPort: 3001
+            - containerPort: 5000
           env:
             - name: PORT
-              value: "3001"
+              value: "5000"
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:

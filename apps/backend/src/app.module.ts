@@ -14,6 +14,14 @@ import { SeedService } from './seed/seed.service';
 import { DeliveryPoint } from './entities/delivery-point.entity';
 import { Trip } from './entities/trip.entity';
 
+import * as crypto from 'crypto';
+import { HealthController } from './health/health.controller';
+
+// Apply before any TypeORM setup
+if (!global.crypto) {
+  (global as any).crypto = { randomUUID: () => crypto.randomBytes(16).toString('hex') };
+}
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -41,7 +49,7 @@ import { Trip } from './entities/trip.entity';
     DeliveryPointsModule,
     TripsModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController,HealthController],
   providers: [AppService, SeedService],
 })
 export class AppModule {}

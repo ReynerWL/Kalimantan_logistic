@@ -1,30 +1,37 @@
-# --- Builder ---
-FROM node:18-alpine AS builder
+# docker/frontend.Dockerfile
+FROM node:18-slim AS builder
 
 WORKDIR /app
 
+# Copy package files
 COPY apps/frontend/package*.json ./
+
+# Install dependencies
 RUN npm ci
 
+# Copy source code
 COPY apps/frontend/. .
+
+# Build app
 RUN npm run build
 
-# --- Runner: Use Nginx for serving static files ---
-FROM nginx:alpine
 
-# LABEL maintainer="you@empatnusabangsa.com"
+# --- Runner ---
+FROM node:18-slim AS runner
 
-# Remove default config
-RUN rm -rf /etc/nginx/conf.d
+WORKDIR /app
 
-# Copy custom Nginx config
-COPY docker/nginx.conf /etc/nginx/nginx.conf
+# Copy built output
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/package.json .
+COPY --from=builder /app/next.config.mjs .
 
-# Copy generated static files
-COPY --from=builder /app/out /usr/share/nginx/html
+# Install only production dependencies
+RUN npm ci --only=production
 
-# Expose port
-EXPOSE 80
+# Expose port 3000
+EXPOSE 3000
 
-# Run Nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Start Next.js server
+CMD ["npx", "next", "start"]

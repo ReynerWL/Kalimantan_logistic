@@ -9,7 +9,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: logistics.yourcompany.local
+    - host: logistics-fe.k3s.bangun-kreatif.com
       http:
         paths:
           - path: /
@@ -19,7 +19,7 @@ spec:
                 name: frontend-svc
                 port:
                   number: 80
-    - host: api.logistics.yourcompany.local
+    - host: logistics-be.k3s.bangun-kreatif.com
       http:
         paths:
           - path: /
