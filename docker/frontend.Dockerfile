@@ -3,34 +3,34 @@ FROM node:18-slim AS builder
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files (both files needed for npm ci)
 COPY apps/frontend/package*.json ./
 
-# Install dependencies (dev + prod)
-RUN npm ci --only=production && npm install --legacy-peer-deps
+# ✅ Install dependencies — generates lockfile if missing, but we already have it
+RUN npm ci --omit=dev
 
 # Copy source code
 COPY apps/frontend/. .
 
-# Build app (includes TypeScript, minification, optimization)
+# Build app
 RUN npm run build
+
 
 # === RUNNER STAGE ===
 FROM node:18-slim AS runner
 
 WORKDIR /app
 
-# Copy only what's needed
+# Copy built output
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
+
+# ✅ Copy package files (including package-lock.json)
 COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/next.config.mjs .
 
-# Install ONLY production dependencies (reinstall to prune dev deps)
-RUN npm ci --only=production --legacy-peer-deps
+# ✅ Install ONLY production dependencies — this will now work!
+RUN npm ci --omit=dev
 
-# Expose port
 EXPOSE 3000
 
-# Start server
 CMD ["npx", "next", "start"]
