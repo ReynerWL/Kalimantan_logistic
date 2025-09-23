@@ -1,65 +1,63 @@
-// app/map/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { Button, Modal, Form, Select, DatePicker, Input, message } from 'antd';
 import dayjs from 'dayjs';
-import dynamic from 'next/dynamic';
+import 'leaflet/dist/leaflet.css';
 
-// ✅ No direct 'leaflet' import here!
+// Dynamically import Map components
+const MapContainer = dynamic(() => import('react-leaflet').then((mod) => mod.MapContainer), { ssr: false });
+const TileLayer = dynamic(() => import('react-leaflet').then((mod) => mod.TileLayer), { ssr: false });
+const Marker = dynamic(() => import('react-leaflet').then((mod) => mod.Marker), { ssr: false });
+const Popup = dynamic(() => import('react-leaflet').then((mod) => mod.Popup), { ssr: false });
 
-// ✅ Correct way: use () => import(...) directly in dynamic
-const MapClient = dynamic(() => import('@/components/MapClient'), {
-  ssr: false,
-  loading: () => <div className="h-full w-full bg-gray-100 flex items-center justify-center">Loading map...</div>,
+import L from 'leaflet';
+import MapSetup from '@/components/MapSetup';
+
+// Fix default icon issue
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
-interface DeliveryPoint {
-  id: string;
-  name: string;
-  type: string;
-  address?: string;
-  latitude: number;
-  longitude: number;
-}
+// Custom red marker
+const customIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+});
 
-// Types
-interface DeliveryPoint {
-  id: string;
-  name: string;
-  type: string;
-  address?: string;
-  latitude: number;
-  longitude: number;
-}
-
-interface Truck {
-  id: string;
-  model: string;
-  policeNumber: string;
-  literPerKm: number;
-}
-
-interface Driver {
-  id: string;
-  name: string;
-  email: string;
-}
+// Highlighted yellow marker
+const highlightedIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-yellow.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+});
 
 const HUB = { lat: -2.2166, lng: 113.9166 };
 
 export default function MapPage() {
   const [open, setOpen] = useState(false);
   const [form] = Form.useForm();
-  const [deliveryPoints, setDeliveryPoints] = useState<DeliveryPoint[]>([]);
-  const [trucks, setTrucks] = useState<Truck[]>([]);
-  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [deliveryPoints, setDeliveryPoints] = useState<any[]>([]);
+  const [trucks, setTrucks] = useState<any[]>([]);
+  const [drivers, setDrivers] = useState<any[]>([]);
   const [preview, setPreview] = useState<any>(null);
+  const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedPoint, setSelectedPoint] = useState<DeliveryPoint | null>(null);
 
-  // Load data
+  // 🔍 Search & Detail State
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedPoint, setSelectedPoint] = useState<any>(null);
+
+  // Load data on mount
   useEffect(() => {
     Promise.all([
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/delivery-points`).then(r => r.json()),
@@ -78,6 +76,7 @@ export default function MapPage() {
       .catch(err => console.error('Failed to load data:', err));
   }, []);
 
+  // 🔎 Handle search input change
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchTerm(value);
@@ -92,30 +91,33 @@ export default function MapPage() {
       p.type?.toLowerCase().includes(value.toLowerCase())
     );
 
-    if (found) {
+    if (found && mapInstance) {
+      mapInstance.setView([found.latitude, found.longitude], 14);
       setSelectedPoint(found);
-      setSearchTerm(found.name);
     }
   };
 
+  // ✅ Close detail panel
   const closeDetailPanel = () => {
     setSelectedPoint(null);
     setSearchTerm('');
   };
 
+  // 🧮 Calculate real road distance using OSRM
   const calculateRouteDistance = async (dest: any): Promise<number> => {
     try {
       const url = `https://router.project-osrm.org/route/v1/driving/${HUB.lng},${HUB.lat};${dest.longitude},${dest.latitude}?overview=false&steps=false`;
       const res = await fetch(url);
       if (!res.ok) throw new Error('Route failed');
       const data = await res.json();
-      return data.routes[0].distance / 1000;
+      return data.routes[0].distance / 1000; // meters → km
     } catch (err) {
       console.warn('Using fallback haversine distance');
       return haversineDistance(HUB.lat, HUB.lng, dest.latitude, dest.longitude);
     }
   };
 
+  // Fallback straight-line distance
   const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -130,6 +132,7 @@ export default function MapPage() {
     return R * c;
   };
 
+  // 💰 Calculate full cost using real route
   const calculateTripCost = async (destination: any, truck: any) => {
     const oneWayKm = await calculateRouteDistance(destination);
     const roundTripKm = oneWayKm * 2;
@@ -152,12 +155,14 @@ export default function MapPage() {
     };
   };
 
+  // 🔍 Preview trip cost
   const onPreview = async (values: any) => {
     setLoadingPreview(true);
     try {
       const { destinationId, truckId } = values;
-      const selectedTruck = trucks.find(t => t.id === truckId);
-      const deliveryPoint = deliveryPoints.find(p => p.id === destinationId);
+
+      const selectedTruck = trucks.find((t: any) => t.id === truckId);
+      const deliveryPoint = deliveryPoints.find((p: any) => p.id === destinationId);
 
       if (!selectedTruck || !deliveryPoint) {
         message.error('Invalid truck or destination');
@@ -167,6 +172,7 @@ export default function MapPage() {
       const cost = await calculateTripCost(deliveryPoint, selectedTruck);
       setPreview(cost);
     } catch (err: any) {
+      console.error('Preview failed:', err);
       message.error('Could not calculate route cost');
       setPreview(null);
     } finally {
@@ -174,6 +180,7 @@ export default function MapPage() {
     }
   };
 
+  // ✅ Start a new trip
   const onStart = async () => {
     let values;
     try {
@@ -216,6 +223,7 @@ export default function MapPage() {
       const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${HUB.lat},${HUB.lng}&destination=${dest.latitude},${dest.longitude}&travelmode=driving`;
       window.open(mapsUrl, '_blank');
     } catch (e: any) {
+      console.error('Trip creation error:', e);
       message.error(e.message.includes('Failed to fetch')
         ? 'Tidak dapat terhubung ke server.'
         : `Gagal memulai rute: ${e.message}`
@@ -227,11 +235,39 @@ export default function MapPage() {
     <div className="h-screen w-screen relative">
       {/* Full-Screen Map */}
       <div style={{ height: '100vh', width: '100%' }}>
-        <MapClient
-          deliveryPoints={deliveryPoints}
-          selectedPoint={selectedPoint}
-          onPointClick={setSelectedPoint}
-        />
+        <MapContainer center={[HUB.lat, HUB.lng]} zoom={12} style={{ height: '100%', width: '100%' }}>
+          <MapSetup setMapInstance={setMapInstance} />
+          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+
+          {/* Hub Marker */}
+          <Marker position={[HUB.lat, HUB.lng]}>
+            <Popup>Pusat Logistik - Jl. G. Obos</Popup>
+          </Marker>
+
+          {/* Delivery Points */}
+          {deliveryPoints.map((p) => {
+            const isSelected = selectedPoint?.id === p.id;
+            return (
+              <Marker
+                key={p.id}
+                position={[p.latitude, p.longitude]}
+                icon={isSelected ? highlightedIcon : customIcon}
+                eventHandlers={{
+                  click: () => {
+                    setSelectedPoint(p);
+                    setSearchTerm(p.name);
+                    mapInstance?.setView([p.latitude, p.longitude], 14);
+                  },
+                }}
+              >
+                <Popup>
+                  <strong>{p.name}</strong><br />
+                  Koordinat: {p.latitude.toFixed(4)}, {p.longitude.toFixed(4)}
+                </Popup>
+              </Marker>
+            );
+          })}
+        </MapContainer>
       </div>
 
       {/* Floating Search Bar */}
@@ -253,7 +289,7 @@ export default function MapPage() {
         />
       </div>
 
-      {/* Info Panel */}
+      {/* Info Panel for Selected Point */}
       {selectedPoint && (
         <div style={{
           position: 'absolute',
@@ -311,7 +347,7 @@ export default function MapPage() {
         </div>
       )}
 
-      {/* FAB */}
+      {/* Floating Action Button */}
       <Button
         type="primary"
         onClick={() => setOpen(true)}
