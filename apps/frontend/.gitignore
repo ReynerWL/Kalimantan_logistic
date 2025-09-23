@@ -1,34 +1,5 @@
 # .dockerignore
 node_modules
-npm-debug.log
-yarn-error.log
-yarn.lock
-package-lock.json
-.pnpm-lock.yaml
-.npm
-.yarn
-.next/cache
-out
-build
-dist
-.DS_Store
-*.log
-logs/
-tmp/
-temp/
-
-# Git & OS
-.git
-.gitignore
-Thumbs.db
-desktop.ini
-
-# Environment
-.env.local
-.env.development
-.env.staging
-# .dockerignore
-node_modules
 .next
 out
 dist
@@ -36,9 +7,21 @@ build
 npm-debug.log
 .git
 .env.local
+.env.development
 .DS_Store
 Thumbs.db
 *.log
 logs/
 coverage/
 .nyc_output/
+.yarn/
+.pnpm/
+.turbo/
+README.md
+LICENSE
+*.md
+*.txt
+*.pdf
+*.jpg
+*.png
+*.svg

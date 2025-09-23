@@ -1,12 +1,28 @@
-// components/MapClient.tsx
 'use client';
 
-import { useState } from 'react';
-import L from 'leaflet';
+import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { DeliveryPoint } from '@/types';
+import L from 'leaflet';
 
-// Icons (same as before)
+// Dynamically import Leaflet components with SSR disabled
+const MapContainer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.MapContainer),
+  { ssr: false }
+);
+const TileLayer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.TileLayer),
+  { ssr: false }
+);
+const Marker = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Marker),
+  { ssr: false }
+);
+const Popup = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Popup),
+  { ssr: false }
+);
+
+// Fix Leaflet default icon
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -14,60 +30,76 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
-const customIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-});
-
-const highlightedIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-yellow.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-});
-
-// Dynamic imports
-const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
-const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false });
-const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false });
-const Popup = dynamic(() => import('react-leaflet').then(mod => mod.Popup), { ssr: false });
+const HUB = { lat: -2.2166, lng: 113.9166 };
 
 export default function MapClient({
-  deliveryPoints,
+  deliveryPoints = [],
   selectedPoint,
   onPointClick,
 }: {
-  deliveryPoints: DeliveryPoint[];
-  selectedPoint: DeliveryPoint | null;
-  onPointClick: (point: DeliveryPoint) => void;
+  deliveryPoints?: any[];
+  selectedPoint?: any;
+  onPointClick?: (point: any) => void;
 }) {
+  const [map, setMap] = useState<L.Map | any>(null); // ✅ Type: L.Map | null
+
+  // ✅ Use `whenReady` correctly — it receives the map instance as a parameter
+  const handleMapReady = (leafletMap: L.Map | void) => {
+    setMap(leafletMap); // ✅ Set the actual map instance
+  };
+
+  // Optional: Re-center or resize when map changes
+  useEffect(() => {
+    if (map) {
+      map.invalidateSize();
+    }
+  }, [map]);
+
   return (
-    <MapContainer center={[-2.2166, 113.9166]} zoom={12} style={{ height: '100%', width: '100%' }}>
-      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+    <div style={{ height: '100%', width: '100%' }}>
+      <MapContainer
+        center={[HUB.lat, HUB.lng]}
+        zoom={12}
+        style={{ height: '100%', width: '100%' }}
+        whenReady={handleMapReady} // ✅ Correct usage — function that receives map
+      >
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        />
 
-      {/* Hub */}
-      <Marker position={[-2.2166, 113.9166]}>
-        <Popup>Pusat Logistik</Popup>
-      </Marker>
-
-      {/* Delivery Points */}
-      {deliveryPoints.map((p) => (
-        <Marker
-          key={p.id}
-          position={[p.latitude, p.longitude]}
-          icon={selectedPoint?.id === p.id ? highlightedIcon : customIcon}
-          eventHandlers={{ click: () => onPointClick(p) }}
-        >
-          <Popup>
-            <strong>{p.name}</strong><br />
-            {p.latitude.toFixed(4)}, {p.longitude.toFixed(4)}
-          </Popup>
+        {/* Hub Marker */}
+        <Marker position={[HUB.lat, HUB.lng]}>
+          <Popup>Pusat Logistik - Jl. G. Obos</Popup>
         </Marker>
-      ))}
-    </MapContainer>
+
+        {/* Delivery Points */}
+        {deliveryPoints.map((p) => (
+          <Marker
+            key={p.id}
+            position={[p.latitude, p.longitude]}
+            icon={selectedPoint?.id === p.id
+              ? L.icon({
+                  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-yellow.png',
+                  iconSize: [25, 41],
+                  iconAnchor: [12, 41],
+                })
+              : L.icon({
+                  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+                  iconSize: [25, 41],
+                  iconAnchor: [12, 41],
+                })}
+            eventHandlers={{
+              click: () => onPointClick?.(p),
+            }}
+          >
+            <Popup>
+              <strong>{p.name}</strong><br />
+              {p.latitude.toFixed(4)}, {p.longitude.toFixed(4)}
+            </Popup>
+          </Marker>
+        ))}
+      </MapContainer>
+    </div>
   );
 }
