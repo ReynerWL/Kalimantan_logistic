@@ -1,12 +1,21 @@
 {
-	"name": "Kalteng Logistic",
-	"short_name": "KL Logistic",
-	"start_url": "/",
-	"display": "standalone",
-	"background_color": "#ffffff",
-	"theme_color": "#1677ff",
-	"icons": [
-		{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-		{ "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
-	]
+  "name": "Kalimantan Logistics",
+  "short_name": "Logistics",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1890ff",
+  "description": "ISP Driver Management System",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 }

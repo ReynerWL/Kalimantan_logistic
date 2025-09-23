@@ -1,29 +1,42 @@
-// app/map/page.tsx
+// app/driver/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Button, Modal, Form, Select, DatePicker, Input, message } from 'antd';
 import dayjs from 'dayjs';
 import dynamic from 'next/dynamic';
 
-// ✅ No direct 'leaflet' import here!
+// ✅ Safe dynamic imports for Leaflet (SSR-safe)
+const MapContainer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.MapContainer),
+  { ssr: false }
+);
+const TileLayer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.TileLayer),
+  { ssr: false }
+);
+const Marker = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Marker),
+  { ssr: false }
+);
+const Popup = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Popup),
+  { ssr: false }
+);
 
-// ✅ Correct way: use () => import(...) directly in dynamic
-const MapClient = dynamic(() => import('@/components/MapClient'), {
-  ssr: false,
-  loading: () => <div className="h-full w-full bg-gray-100 flex items-center justify-center">Loading map...</div>,
+// ✅ Import Leaflet only on client side
+import L from 'leaflet';
+import MapClient from '@/components/MapClient';
+
+// ✅ Fix Leaflet icon paths (critical for map to render)
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
-interface DeliveryPoint {
-  id: string;
-  name: string;
-  type: string;
-  address?: string;
-  latitude: number;
-  longitude: number;
-}
-
-// Types
+// ✅ Define types
 interface DeliveryPoint {
   id: string;
   name: string;
@@ -58,26 +71,37 @@ export default function MapPage() {
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPoint, setSelectedPoint] = useState<DeliveryPoint | null>(null);
+  const [map, setMap] = useState<L.Map | null>(null); // ✅ Use useRef or state for map instance
 
-  // Load data
+  const mapRef = useRef<L.Map | null>(null); // ✅ Better: useRef for map instance
+
+  // ✅ Load data from HTTPS API (Vercel is HTTPS, backend must be HTTPS too)
   useEffect(() => {
-    Promise.all([
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/delivery-points`).then(r => r.json()),
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/trucks`).then(r => r.json()),
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/users?role=driver`).then(r => r.json()),
-    ])
-      .then(([dpRes, truckRes, driverRes]) => {
-        const points = Array.isArray(dpRes) ? dpRes : dpRes.data || [];
-        const trucksData = Array.isArray(truckRes) ? truckRes : truckRes.data || [];
-        const driversData = Array.isArray(driverRes) ? driverRes : driverRes.data || [];
+    const fetchAllData = async () => {
+      try {
+        const [dpRes, truckRes, driverRes] = await Promise.all([
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/delivery-points`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/trucks`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/users?role=driver`),
+        ]);
+
+        const points = (await dpRes.json())?.data || [];
+        const trucksData = (await truckRes.json())?.data || [];
+        const driversData = (await driverRes.json())?.data || [];
 
         setDeliveryPoints(points);
         setTrucks(trucksData);
         setDrivers(driversData);
-      })
-      .catch(err => console.error('Failed to load data:', err));
+      } catch (err) {
+        console.error('Failed to load data:', err);
+        message.error('Failed to load data. Please check your API connection.');
+      }
+    };
+
+    fetchAllData();
   }, []);
 
+  // ✅ Handle search input
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchTerm(value);
@@ -95,42 +119,50 @@ export default function MapPage() {
     if (found) {
       setSelectedPoint(found);
       setSearchTerm(found.name);
+      // Optional: center map on point
+      if (mapRef.current) {
+        mapRef.current.setView([found.latitude, found.longitude], 14);
+      }
     }
   };
 
+  // ✅ Close detail panel
   const closeDetailPanel = () => {
     setSelectedPoint(null);
     setSearchTerm('');
   };
 
-  const calculateRouteDistance = async (dest: any): Promise<number> => {
+  // ✅ Calculate route distance
+  const calculateRouteDistance = async (dest: { latitude: number; longitude: number }): Promise<number> => {
     try {
       const url = `https://router.project-osrm.org/route/v1/driving/${HUB.lng},${HUB.lat};${dest.longitude},${dest.latitude}?overview=false&steps=false`;
       const res = await fetch(url);
       if (!res.ok) throw new Error('Route failed');
       const data = await res.json();
-      return data.routes[0].distance / 1000;
+      return data.routes[0].distance / 1000; // meters → km
     } catch (err) {
-      console.warn('Using fallback haversine distance');
+      console.warn('OSRM failed, using haversine fallback');
       return haversineDistance(HUB.lat, HUB.lng, dest.latitude, dest.longitude);
     }
   };
 
-  const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  // ✅ Haversine distance fallback
+  const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
     const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * Math.PI / 180) *
-      Math.cos(lat2 * Math.PI / 180) *
+      Math.cos(lat1 * (Math.PI / 180)) *
+      Math.cos(lat2 * (Math.PI / 180)) *
       Math.sin(dLon / 2) *
       Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   };
 
-  const calculateTripCost = async (destination: any, truck: any) => {
+  // ✅ Calculate trip cost
+  const calculateTripCost = async (destination: DeliveryPoint, truck: Truck) => {
     const oneWayKm = await calculateRouteDistance(destination);
     const roundTripKm = oneWayKm * 2;
     const durationHours = roundTripKm / 40;
@@ -152,12 +184,13 @@ export default function MapPage() {
     };
   };
 
+  // ✅ Handle preview calculation
   const onPreview = async (values: any) => {
     setLoadingPreview(true);
     try {
       const { destinationId, truckId } = values;
-      const selectedTruck = trucks.find(t => t.id === truckId);
-      const deliveryPoint = deliveryPoints.find(p => p.id === destinationId);
+      const selectedTruck = trucks.find((t) => t.id === truckId);
+      const deliveryPoint = deliveryPoints.find((p) => p.id === destinationId);
 
       if (!selectedTruck || !deliveryPoint) {
         message.error('Invalid truck or destination');
@@ -174,6 +207,7 @@ export default function MapPage() {
     }
   };
 
+  // ✅ Handle trip start
   const onStart = async () => {
     let values;
     try {
@@ -216,15 +250,23 @@ export default function MapPage() {
       const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${HUB.lat},${HUB.lng}&destination=${dest.latitude},${dest.longitude}&travelmode=driving`;
       window.open(mapsUrl, '_blank');
     } catch (e: any) {
-      message.error(e.message.includes('Failed to fetch')
-        ? 'Tidak dapat terhubung ke server.'
-        : `Gagal memulai rute: ${e.message}`
+      message.error(
+        e.message.includes('Failed to fetch')
+          ? 'Tidak dapat terhubung ke server.'
+          : `Gagal memulai rute: ${e.message}`
       );
     }
   };
 
+  // ✅ Handle map ready event — this is critical
+  const handleMapReady = (leafletMap: L.Map | any | void) => {
+    mapRef.current = leafletMap; // ✅ Store reference
+    setMap(leafletMap); // ✅ Also set state if needed
+    leafletMap.invalidateSize(); // ✅ Fix: resize map after render
+  };
+
   return (
-    <div className="h-screen w-screen relative">
+    <div className="h-screen w-screen relative bg-gray-50">
       {/* Full-Screen Map */}
       <div style={{ height: '100vh', width: '100%' }}>
         <MapClient
