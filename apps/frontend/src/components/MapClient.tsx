@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import L from 'leaflet';
 
 // Dynamically import Leaflet components with SSR disabled
 const MapContainer = dynamic(
@@ -22,14 +21,6 @@ const Popup = dynamic(
   { ssr: false }
 );
 
-// Fix Leaflet default icon
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-});
-
 const HUB = { lat: -2.2166, lng: 113.9166 };
 
 export default function MapClient({
@@ -41,65 +32,42 @@ export default function MapClient({
   selectedPoint?: any;
   onPointClick?: (point: any) => void;
 }) {
-  const [map, setMap] = useState<L.Map | any>(null); // ✅ Type: L.Map | null
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstance = useRef<L.Map | null>(null);
 
-  // ✅ Use `whenReady` correctly — it receives the map instance as a parameter
-  const handleMapReady = (leafletMap: L.Map | void) => {
-    setMap(leafletMap); // ✅ Set the actual map instance
-  };
-
-  // Optional: Re-center or resize when map changes
+  // ✅ ONLY run this on the client — never on server
   useEffect(() => {
-    if (map) {
-      map.invalidateSize();
+    // ✅ Safe: this runs only on client
+    const L = require('leaflet'); // 👈 Import dynamically at runtime
+
+    // ✅ Fix Leaflet icons — only on client
+    delete (L.Icon.Default.prototype as any)._getIconUrl;
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    });
+
+    // ✅ Initialize map only after DOM is ready
+    if (mapRef.current) {
+      mapInstance.current = L.map(mapRef.current).setView([HUB.lat, HUB.lng], 12);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+      }).addTo(mapInstance.current);
     }
-  }, [map]);
+
+    // Cleanup
+    return () => {
+      if (mapInstance.current) {
+        mapInstance.current.remove();
+      }
+    };
+  }, []); // ✅ Run once on mount
 
   return (
     <div style={{ height: '100%', width: '100%' }}>
-      <MapContainer
-        center={[HUB.lat, HUB.lng]}
-        zoom={12}
-        style={{ height: '100%', width: '100%' }}
-        whenReady={handleMapReady} // ✅ Correct usage — function that receives map
-      >
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        />
-
-        {/* Hub Marker */}
-        <Marker position={[HUB.lat, HUB.lng]}>
-          <Popup>Pusat Logistik - Jl. G. Obos</Popup>
-        </Marker>
-
-        {/* Delivery Points */}
-        {deliveryPoints.map((p) => (
-          <Marker
-            key={p.id}
-            position={[p.latitude, p.longitude]}
-            icon={selectedPoint?.id === p.id
-              ? L.icon({
-                  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-yellow.png',
-                  iconSize: [25, 41],
-                  iconAnchor: [12, 41],
-                })
-              : L.icon({
-                  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
-                  iconSize: [25, 41],
-                  iconAnchor: [12, 41],
-                })}
-            eventHandlers={{
-              click: () => onPointClick?.(p),
-            }}
-          >
-            <Popup>
-              <strong>{p.name}</strong><br />
-              {p.latitude.toFixed(4)}, {p.longitude.toFixed(4)}
-            </Popup>
-          </Marker>
-        ))}
-      </MapContainer>
+      <div ref={mapRef} style={{ height: '100%', width: '100%' }} />
     </div>
   );
 }
