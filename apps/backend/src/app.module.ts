@@ -13,6 +13,7 @@ import { TripsModule } from './trips/trips.module';
 import { SeedService } from './seed/seed.service';
 import { DeliveryPoint } from './entities/delivery-point.entity';
 import { Trip } from './entities/trip.entity';
+import { LoggerModule } from 'nestjs-pino';
 
 import * as crypto from 'crypto';
 import { HealthController } from './health/health.controller';
@@ -28,6 +29,7 @@ if (!global.crypto) {
       isGlobal: true,
       envFilePath: ['../../.env.backend', '.env'],
     }),
+    LoggerModule.forRoot({ pinoHttp: { transport: { target: 'pino-pretty' } } }),
     TypeOrmModule.forRootAsync({
       useFactory: () => ({
         type: 'postgres',

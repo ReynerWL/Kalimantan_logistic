@@ -4,10 +4,10 @@ metadata:
   name: app-ingress
   namespace: logistics-app
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    kubernetes.io/ingress.class: "traefik"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.middlewares: logistics-app-redirect-https@kubernetescrd
 spec:
-  ingressClassName: nginx
   rules:
     - host: logistics-fe.k3s.bangun-kreatif.com
       http:
@@ -30,8 +30,8 @@ spec:
                 port:
                   number: 80
   # Optional: TLS
-  # tls:
-  #   - hosts:
-  #       - logistics.yourcompany.local
-  #       - api.logistics.yourcompany.local
-  #     secretName: tls-secret
+  tls:
+    - hosts:
+        - "logistics-be.k3s.bangun-kreatif.com"
+        - "logistics-fe.k3s.bangun-kreatif.com"
+      secretName: logistics-app-k3s-bangun-kreatif-com-tls
