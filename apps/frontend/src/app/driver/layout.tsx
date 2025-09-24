@@ -1,6 +1,4 @@
-// src/app/driver/layout.tsx
-import type { Viewport } from 'next';
-
+'use client';
 // ✅ Define viewport for /driver and all its sub-pages
 export const viewport = {
   themeColor: 'black',
