@@ -1,11 +1,12 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { Logger, ValidationPipe } from '@nestjs/common';
+import {ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as crypto from 'crypto';
 import { CorrelationIdMiddleware } from './utils/correlation-id.middleware';
+import { Logger } from 'nestjs-pino';
 
 // ✅ Polyfill for Node.js crypto if not available
 if (!global.crypto) {
