@@ -13,11 +13,7 @@ if (!global.crypto) {
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { cors: true });
-  app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000' || 'https://5bdx1kx5-3000.asse.devtunnels.ms' || "https://kalimantan-logistic-au4e.vercel.app",
-    credentials: true,
-  });
+  const app = await NestFactory.create(AppModule, { cors: false });
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true })
   );
