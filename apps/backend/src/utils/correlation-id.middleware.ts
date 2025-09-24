@@ -1,7 +1,7 @@
 import * as uuid from 'uuid';
 
 export function CorrelationIdMiddleware() {
-  return (req, res, next: () => void) => {
+  return (req:any, res:any, next: () => void) => {
     const correlationHeader = req.headers['x-correlation-id'] || uuid.v4();
 
     // eslint-disable-next-line no-param-reassign

@@ -4,6 +4,8 @@ import { useEffect, useState, useRef } from 'react';
 import { Button, Modal, Form, Select, DatePicker, Input, message } from 'antd';
 import dayjs from 'dayjs';
 import dynamic from 'next/dynamic';
+import { config } from '@/config/app';
+
 
 // ✅ Delay MapClient import until client
 const MapClient = dynamic(() => import('@/components/MapClient'), {
@@ -50,9 +52,9 @@ export default function MapPage() {
     const fetchAllData = async () => {
       try {
         const [dpRes, truckRes, driverRes] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/delivery-points`),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/trucks`),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/users?role=driver`),
+          fetch(`${config.baseUrl}/delivery-points`),
+          fetch(`${config.baseUrl}/trucks`),
+          fetch(`${config.baseUrl}/users?role=driver`),
         ]);
 
         const points = (await dpRes.json()).data || [];
@@ -178,7 +180,7 @@ export default function MapPage() {
     const { driverId, truckId, destinationId, startAt } = values;
 
     try {
-      const destRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/delivery-points/${destinationId}`);
+      const destRes = await fetch(`${config.baseUrl}/delivery-points/${destinationId}`);
       if (!destRes.ok) throw new Error('Destination not found');
       const dest = await destRes.json();
 
@@ -190,7 +192,7 @@ export default function MapPage() {
         miscCost: preview?.miscCostIdr || 0,
       };
 
-      const tripRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/trips`, {
+      const tripRes = await fetch(`${config.baseUrl}/trips`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

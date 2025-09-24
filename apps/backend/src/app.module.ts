@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -29,7 +29,37 @@ if (!global.crypto) {
       isGlobal: true,
       envFilePath: ['../../.env.backend', '.env'],
     }),
-    LoggerModule.forRoot({ pinoHttp: { transport: { target: 'pino-pretty' } } }),
+    LoggerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => {
+        const isProd = configService.get('NODE_ENV') === 'production';
+
+        return {
+          pinoHttp: {
+            level: configService.get('LOG_LEVEL', 'info'),
+            ...(isProd
+              ? {}
+              : {
+                  transport: {
+                    target: 'pino-pretty',
+                    options: {
+                      colorize: true,
+                      singleLine: true,
+                      translateTime: 'HH:MM:ss',
+                      ignore: 'pid,hostname',
+                    },
+                  },
+                }),
+            customProps() {
+              return {
+                service: 'backend',
+                env: process.env.NODE_ENV || 'local',
+              };
+            },
+          },
+        };
+      },
+    }),
     TypeOrmModule.forRootAsync({
       useFactory: () => ({
         type: 'postgres',

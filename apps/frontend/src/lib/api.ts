@@ -1,9 +1,10 @@
 import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
+import { config } from '@/config/app';
 
 // We export a factory to get an axios instance that injects our JWT
 export function createApi(getToken: () => string | null) {
-	const instance = axios.create({ baseURL: process.env.NEXT_PUBLIC_API_URL });
+	const instance = axios.create({ baseURL: config.baseUrl });
 	instance.interceptors.request.use((config) => {
 		const token = getToken();
 		if (token) {

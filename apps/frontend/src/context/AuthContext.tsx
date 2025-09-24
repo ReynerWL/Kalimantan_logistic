@@ -1,4 +1,5 @@
 'use client';
+import { config } from '@/config/app';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 type AuthUser = { id: string; name: string; email: string; role: 'admin' | 'driver' };
@@ -31,7 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login: AuthState['login'] = async ({ email, password }) => {
     try {
-      const res = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') + '/auth/login', {
+      const res = await fetch((process.env.NEXT_PUBLIC_API_URL || config.baseUrl) + '/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
