@@ -1,10 +1,15 @@
 'use client';
-// ✅ Define viewport for /driver and all its sub-pages
-export const viewport = {
+
+import type { Viewport } from 'next';
+
+// ✅ Define viewport with proper type for /driver and all its sub-pages
+export const viewport: Viewport = {
   themeColor: 'black',
   colorScheme: 'dark',
   width: 'device-width',
   initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function DriverLayout({
@@ -12,9 +17,5 @@ export default function DriverLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <div>
-      {children}
-    </div>
-  );
+  return <div>{children}</div>;
 }

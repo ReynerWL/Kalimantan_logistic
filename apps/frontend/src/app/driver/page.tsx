@@ -1,17 +1,21 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Button, Modal, Form, Select, DatePicker, Input, message } from 'antd';
 import dayjs from 'dayjs';
 import dynamic from 'next/dynamic';
-import { config } from '@/config/app';
 
-
-// ✅ Delay MapClient import until client
+// ✅ Dynamically import MapClient to disable SSR
 const MapClient = dynamic(() => import('@/components/MapClient'), {
   ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-full bg-gray-100">
+      Loading map...
+    </div>
+  ),
 });
 
+// Types
 interface DeliveryPoint {
   id: string;
   name: string;
@@ -47,30 +51,25 @@ export default function MapPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPoint, setSelectedPoint] = useState<DeliveryPoint | null>(null);
 
-  // Load data only on client
+  // Load data
   useEffect(() => {
-    const fetchAllData = async () => {
-      try {
-        const [dpRes, truckRes, driverRes] = await Promise.all([
-          fetch(`${config.baseUrl}/delivery-points`),
-          fetch(`${config.baseUrl}/trucks`),
-          fetch(`${config.baseUrl}/users?role=driver`),
-        ]);
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://logistics-be.k3s.bangun-kreatif.com';
 
-        const points = (await dpRes.json()).data || [];
-        const trucksData = (await truckRes.json()).data || [];
-        const driversData = (await driverRes.json()).data || [];
+    Promise.all([
+      fetch(`${API_URL}/delivery-points`).then(r => r.json()),
+      fetch(`${API_URL}/trucks`).then(r => r.json()),
+      fetch(`${API_URL}/users?role=driver`).then(r => r.json()),
+    ])
+      .then(([dpRes, truckRes, driverRes]) => {
+        const points = Array.isArray(dpRes) ? dpRes : dpRes.data || [];
+        const trucksData = Array.isArray(truckRes) ? truckRes : truckRes.data || [];
+        const driversData = Array.isArray(driverRes) ? driverRes : driverRes.data || [];
 
         setDeliveryPoints(points);
         setTrucks(trucksData);
         setDrivers(driversData);
-      } catch (err) {
-        console.error('Failed to load data:', err);
-        message.error('Gagal memuat data');
-      }
-    };
-
-    fetchAllData();
+      })
+      .catch(err => console.error('Failed to load data:', err));
   }, []);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,29 +97,30 @@ export default function MapPage() {
     setSearchTerm('');
   };
 
-  const calculateRouteDistance = async (dest: any): Promise<number> => {
+  // Calculate real route distance using OSRM
+  const calculateRouteDistance = async (dest: DeliveryPoint): Promise<number> => {
     try {
       const url = `https://router.project-osrm.org/route/v1/driving/${HUB.lng},${HUB.lat};${dest.longitude},${dest.latitude}?overview=false&steps=false`;
       const res = await fetch(url);
       if (!res.ok) throw new Error('Route failed');
       const data = await res.json();
-      return data.routes[0].distance / 1000;
-    } catch (e) {
-      console.error('Routing error:', e);
+      return data.routes[0].distance / 1000; // meters → km
+    } catch (err) {
+      console.warn('Using fallback haversine distance');
+      return haversineDistance(HUB.lat, HUB.lng, dest.latitude, dest.longitude);
     }
-    // Fallback logic
-    return haversineDistance(HUB.lat, HUB.lng, dest.latitude, dest.longitude);
   };
 
-  const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a =
-      Math.sin(dLat / 2) ** 2 +
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos(lat1 * Math.PI / 180) *
       Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon / 2) ** 2;
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   };
@@ -178,9 +178,10 @@ export default function MapPage() {
     }
 
     const { driverId, truckId, destinationId, startAt } = values;
+    const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
     try {
-      const destRes = await fetch(`${config.baseUrl}/delivery-points/${destinationId}`);
+      const destRes = await fetch(`${API_URL}/delivery-points/${destinationId}`);
       if (!destRes.ok) throw new Error('Destination not found');
       const dest = await destRes.json();
 
@@ -192,7 +193,7 @@ export default function MapPage() {
         miscCost: preview?.miscCostIdr || 0,
       };
 
-      const tripRes = await fetch(`${config.baseUrl}/trips`, {
+      const tripRes = await fetch(`${API_URL}/trips`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -211,16 +212,15 @@ export default function MapPage() {
       const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${HUB.lat},${HUB.lng}&destination=${dest.latitude},${dest.longitude}&travelmode=driving`;
       window.open(mapsUrl, '_blank');
     } catch (e: any) {
-      message.error(
-        e.message.includes('Failed to fetch')
-          ? 'Tidak dapat terhubung ke server.'
-          : `Gagal memulai rute: ${e.message}`
+      message.error(e.message.includes('Failed to fetch')
+        ? 'Tidak dapat terhubung ke server.'
+        : `Gagal memulai rute: ${e.message}`
       );
     }
   };
 
   return (
-    <div className="h-screen w-screen relative bg-gray-50">
+    <div className="h-screen w-screen relative">
       {/* Full-Screen Map */}
       <div style={{ height: '100vh', width: '100%' }}>
         <MapClient
@@ -273,7 +273,7 @@ export default function MapPage() {
             <Button type="text" size="small" onClick={closeDetailPanel} style={{ color: '#999' }}>✕</Button>
           </div>
           <p style={{ margin: '6px 0', color: '#555' }}>Tipe: {selectedPoint.type}</p>
-          <p style={{ margin: '6px 0', color: '#555' }}>Alamat: {selectedPoint.address || 'Tidak tersedia'}</p>
+          <p style={{ margin: '6px 0', color: '#555' }}>Alamat: {selectedPoint.address || '-'}</p>
           <p style={{ margin: '6px 0', color: '#555' }}>
             Koordinat: {selectedPoint.latitude.toFixed(4)}, {selectedPoint.longitude.toFixed(4)}
           </p>
